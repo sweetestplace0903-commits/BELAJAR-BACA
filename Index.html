@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Belajar Membaca Pastel</title>
+    <style>
+        /* --- CSS RAMAH ANAK DAN PASTEL --- */
+        :root {
+            /* Palet Warna Pastel */
+            --pastel-bg: #f7f3f7;   /* Abu Putih Sangat Terang */
+            --pastel-primary: #a8dadc; /* Biru Muda/Mint */
+            --pastel-secondary: #f4c2c2; /* Pink Muda */
+            --pastel-success: #b5e7a9; /* Hijau Muda */
+            --pastel-warning: #ffd3b5; /* Peach Muda */
+            --pastel-dark: #667292;  /* Biru Abu Gelap */
+            --shadow-light: rgba(0, 0, 0, 0.1);
+            --shadow-deep: rgba(0, 0, 0, 0.2);
+        }
+
+        body { 
+            font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', sans-serif; 
+            background-color: var(--pastel-bg); 
+            text-align: center; 
+            padding: 10px; 
+            margin: 0; 
+            color: var(--pastel-dark);
+        }
+        h1 {
+            color: var(--pastel-secondary); 
+            font-size: 2.5em; 
+            text-shadow: 2px 2px #fff;
+        }
+        h2 { font-size: 1.8em; color: var(--pastel-dark); }
+        h3 { color: var(--pastel-dark); }
+        .container { 
+            max-width: 950px; margin: 20px auto; padding: 30px; 
+            background-color: #ffffff; border-radius: 25px; 
+            box-shadow: 0 8px 20px var(--shadow-light); position: relative; 
+        }
+        .hidden { display: none !important; }
+
+        /* KARTU MENU DAN LEVEL */
+        #main-menu { display: flex; justify-content: space-around; flex-wrap: wrap; }
+        #level-selection { display: flex; flex-direction: column; align-items: center; } 
+        
+        .game-card, .level-card { 
+            flex-basis: 30%; padding: 25px 15px; margin: 15px 10px; 
+            border-radius: 15px; cursor: pointer; box-shadow: 0 6px 0 var(--pastel-neutral); 
+            transition: transform 0.15s, box-shadow 0.15s; font-size: 1.2em;
+            border: 3px solid #fff; width: 80%; max-width: 350px;
+        }
+        .game-card:active, .level-card:active { transform: translateY(6px); box-shadow: 0 0 0 var(--pastel-neutral); }
+        .game-card:hover, .level-card:hover:not(.completed) { transform: translateY(-3px); box-shadow: 0 10px 15px var(--shadow-deep); }
+
+        /* Warna Kartu Menu (Pastel yang disesuaikan) */
+        /* Urutan 1: EJA & BACA (Biru/Mint), Urutan 2: Tebak Gambar, Urutan 3: Susun Kata, Urutan 4: Susun Kalimat */
+        .game-card[data-game="eja-baca"] { background-color: var(--pastel-primary); color: var(--pastel-dark); } 
+        .game-card[data-game="tebak-gambar"] { background-color: #fce3e7; color: var(--pastel-dark); } 
+        .game-card[data-game="susun-kata"] { background-color: #e3fcfd; color: var(--pastel-dark); } 
+        .game-card[data-game="susun-kalimat"] { background-color: #e0f2f1; color: var(--pastel-dark); } 
+
+        .game-card .icon { font-size: 4.5em; display: block; margin-bottom: 10px; }
+        /* Warna Level */
+        .level-card[data-level="1"] { background-color: var(--pastel-success); box-shadow: 0 6px 0 #8dc67d; color: var(--pastel-dark); } 
+        .level-card[data-level="2"] { background-color: var(--pastel-warning); box-shadow: 0 6px 0 #ff9966; color: var(--pastel-dark); } 
+        .level-card[data-level="3"] { background-color: var(--pastel-secondary); box-shadow: 0 6px 0 #cc9999; color: var(--pastel-dark); } 
+
+        /* KOTAK SOAL (GRID) - Warna Pastel */
+        #question-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 30px; }
+        .question-box { 
+            width: 80px; height: 80px; line-height: 80px; color: var(--pastel-dark); 
+            font-size: 2.0em; font-weight: bold; border-radius: 10px; 
+            cursor: pointer; box-shadow: 0 4px 0 rgba(0,0,0,0.2); 
+            transition: transform 0.1s; border: 3px solid var(--pastel-dark);
+        }
+        .question-box:active { transform: translateY(4px); box-shadow: 0 0 0; }
+        .question-box.completed { 
+            background-color: var(--pastel-neutral) !important; 
+            box-shadow: 0 4px 0 #a0a0a0; 
+            cursor: not-allowed; 
+        }
+
+        /* Skema Warna Pastel untuk Kotak Soal */
+        .question-box:nth-child(3n + 1) { background-color: #ffdab9; } 
+        .question-box:nth-child(3n + 2) { background-color: #c9e4de; } 
+        .question-box:nth-child(3n + 3) { background-color: #e9e5ff; } 
+
+        /* Thumbnail untuk Tebak Gambar & Eja Baca*/
+        .question-box.thumbnail {
+            padding: 5px; line-height: normal; display: flex;
+            flex-direction: column; align-items: center; justify-content: center;
+            position: relative;
+        }
+        .question-box.thumbnail img {
+            width: 100%; height: 100%; object-fit: cover; border-radius: 5px; opacity: 0.8;
+        }
+        .question-box.thumbnail.completed img { opacity: 0.3; }
+
+        /* TAMPILAN SOAL AKTIF */
+        .image-placeholder {
+            width: 200px; height: 200px; background-color: var(--pastel-bg); 
+            margin: 25px auto; border: 8px solid var(--pastel-warning); 
+            border-radius: 15px; display: flex; align-items: center; justify-content: center;
+        }
+        .option-btn {
+            padding: 18px 35px; margin: 10px; font-weight: bold;
+            border: 4px solid var(--pastel-primary); background-color: #f0f8ff;
+            border-radius: 35px; font-size: 1.4em; color: var(--pastel-dark);
+        }
+        .option-btn.correct { background-color: var(--pastel-success); border-color: #8dc67d; color: white; }
+        .option-btn.wrong { background-color: var(--pastel-secondary); border-color: #cc9999; color: white; }
+        
+        /* Susun Kata/Kalimat & Eja Baca Input */
+        #active-word-box { 
+            height: 50px; line-height: 50px; border: 3px dashed var(--pastel-secondary); 
+            background-color: #fff9e6; font-size: 2.2em; border-radius: 12px;
+            color: var(--pastel-dark); font-weight: bold;
+        }
+        .letter-btn, .word-btn { 
+            padding: 20px 25px; margin: 8px; font-size: 1.6em; border-radius: 12px; 
+            border: 4px solid var(--pastel-primary); background-color: #e6f7ff; 
+            color: var(--pastel-dark);
+        }
+        .word-btn { border-radius: 30px; }
+        .letter-btn:disabled, .word-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* MODAL */
+        .modal { position: fixed; z-index: 9999; left: 0; top: 0; width: 100vw; height: 100vh; background-color: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; overflow: auto; }
+        .modal-content { background-color: #fefefe; padding: 40px; border: 8px solid var(--pastel-primary); width: 80%; max-width: 400px; border-radius: 20px; text-align: center; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
+        .modal-content.correct-bg { border-color: var(--pastel-success); }
+        .modal-content.wrong-bg { border-color: var(--pastel-secondary); }
+        #modal-title { font-size: 2.8em; }
+
+        /* TOMBOL NAVIGASI UMUM */
+.back-btn { 
+    padding: 15px 25px; font-size: 1.4em; background-color: var(--pastel-dark); 
+    color: white; border: none; border-radius: 10px; cursor: pointer;
+    display: block; width: 80%; max-width: 300px; margin: 20px auto 10px; 
+    box-shadow: 0 4px 0 #4a516b; /* Shadow 3D untuk tombol navigasi (dark) */
+    transition: all 0.1s;
+}
+.back-btn:active {
+    transform: translateY(4px);
+    box-shadow: 0 0 0 #4a516b;
+}
+
+/* Penyesuaian Warna Tombol Aksi di Game */
+#check-eja-btn, #check-word-btn, #check-sentence-btn {
+    /* Menggunakan warna yang lebih cerah dan shadow yang kuat */
+    background-color: #FF9966 !important; /* Warna Oranye-Peach yang lebih kuat */
+    color: white !important;
+    font-weight: bold;
+    box-shadow: 0 6px 0 #e67e3a; /* Shadow yang lebih tebal */
+    max-width: 200px; /* Batasi lebar agar tidak terlalu lebar di flex box */
+    width: 100%;
+}
+
+#check-eja-btn:active, #check-word-btn:active, #check-sentence-btn:active {
+    transform: translateY(6px);
+    box-shadow: 0 0 0 #e67e3a;
+}
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Game Belajar Membaca Ceria 📚</h1>
+        <p>Pilih jenis permainan untuk memulai belajar.</p>
+    </header>
+
+    <div id="main-menu" class="container">
+        <div class="game-card" data-game="eja-baca"> <span class="icon">✍️</span><h2>Eja & Baca</h2><p>Tulis nama gambar dari huruf acak.</p></div>
+
+        <div class="game-card" data-game="tebak-gambar"> <span class="icon">🖼️</span><h2>Tebak Gambar</h2><p>Cocokkan kata dengan gambar.</p></div>
+        <div class="game-card" data-game="susun-kata"> <span class="icon">🧩</span><h2>Susun Kata</h2><p>Susun huruf acak.</p></div>
+        <div class="game-card" data-game="susun-kalimat"><span class="icon">📝</span><h2>Susun Kalimat</h2><p>Atur kata menjadi kalimat.</p></div>
+    </div>
+
+    <div id="level-selection" class="container hidden">
+        <h2 id="level-title">Pilih Tingkat Kesulitan</h2>
+        
+        <div class="level-card" data-level="1">Level 1: MUDAH</div>
+        <div class="level-card" data-level="2">Level 2: SEDANG</div>
+        <div class="level-card" data-level="3">Level 3: SULIT</div>
+
+        <button id="back-to-menu" class="back-btn">KEMBALI KE MENU</button> 
+    </div>
+
+    <div id="game-area" class="container hidden">
+        <h3 id="current-game-info"></h3>
+        
+        <div id="question-grid"></div> 
+        <div id="active-question-view" class="hidden"></div> 
+        
+        <button id="back-to-level" class="back-btn" style="display: none;">KEMBALI KE LEVEL</button>
+    </div>
+
+    <div id="custom-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2 id="modal-title"></h2>
+            <p id="modal-message"></p>
+            <button id="modal-ok-btn" class="back-btn">OK</button>
+        </div>
+    </div>
+
+    <audio id="audio-correct" src="sounds/correct.mp3" preload="auto"></audio>
+    <audio id="audio-wrong" src="sounds/wrong.mp3" preload="auto"></audio>
+    
+    <script>
+        // =========================================================================
+        // --- DATA SOAL (3 Soal per Level) ---
+        // =========================================================================
+        // Helper: Fungsi untuk mengacak array huruf dengan huruf pengecoh
+        function createScramble(correctWord, numPlaceholders) {
+            const correctLetters = correctWord.toUpperCase().split('');
+            const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+            let scrambled = [...correctLetters];
+            
+            // Tambahkan huruf pengecoh
+            for (let i = correctLetters.length; i < numPlaceholders; i++) {
+                // Ambil huruf acak dari alfabet (menghindari huruf vokal sering)
+                const randomLetter = alphabet[Math.floor(Math.random() * alphabet.length)];
+                scrambled.push(randomLetter);
+            }
+            
+            // Acak posisi huruf
+            for (let i = scrambled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [scrambled[i], scrambled[j]] = [scrambled[j], scrambled[i]];
+            }
+            return scrambled;
+        }
+
+        const EJA_BACA_DATA = { // EJA & TEBAK DATA (Baru)
+            level1: [ // 4 Huruf, 4 slot huruf (0 pengecoh)
+                { id: 1, image: "Bola.png", answer: "BOLA", scrambled: createScramble("BOLA", 4) },
+                { id: 2, image: "Kaki.png", answer: "KAKI", scrambled: createScramble("KAKI", 4) },
+                { id: 3, image: "Meja.png", answer: "MEJA", scrambled: createScramble("MEJA", 4) },
+                { id: 4, image: "Jam.png", answer: "JAM", scrambled: createScramble("JAM", 3) },
+                { id: 5, image: "Tas.png", answer: "TAS", scrambled: createScramble("TAS", 3) },
+            ],
+            level2: [ // 5-6 Huruf, 8 slot huruf (2-3 pengecoh)
+                { id: 1, image: "Gajah.png", answer: "GAJAH", scrambled: createScramble("GAJAH", 5) },
+                { id: 2, image: "Boneka.png", answer: "BONEKA", scrambled: createScramble("BONEKA", 6) },
+                { id: 3, image: "Rumah.png", answer: "RUMAH", scrambled: createScramble("RUMAH", 8) },
+                { id: 4, image: "Pantai.png", answer: "PANTAI", scrambled: createScramble("PANTAI", 8) },
+                { id: 5, image: "Kompor.png", answer: "KOMPOR", scrambled: createScramble("KOMPOR", 8) },
+            ],
+            level3: [ // 6+ Huruf, 12 slot huruf (6+ pengecoh)
+                { id: 1, image: "Belalang.png", answer: "BELALANG", scrambled: createScramble("BELALANG", 12) },
+                { id: 2, image: "Payung.png", answer: "PAYUNG", scrambled: createScramble("PAYUNG", 12) },
+                { id: 3, image: "Semangka.png", answer: "SEMANGKA", scrambled: createScramble("SEMANGKA", 12) },
+                { id: 4, image: "Sarung.png", answer: "SARUNG", scrambled: createScramble("SARUNG", 12) },
+                { id: 5, image: "Angka.png", answer: "ANGKA", scrambled: createScramble("ANGKA", 12) },
+            ],
+        };
+
+        const TEBAK_GAMBAR_DATA = {
+            level1: [
+                { id: 1, image: "Buku.png", answer: "BUKU", options: ["BABI", "BULU", "BUKU"] },
+                { id: 2, image: "Batu.png", answer: "BATU", options: ["PINTU", "BATU", "DASI"] },
+                { id: 3, image: "Mata.png", answer: "MATA", options: ["KACA", "GULA", "MATA"] },
+            ],
+            level2: [
+                { id: 1, image: "Macan.png", answer: "MACAN", options: ["MACAN", "GAJAH", "KUDA"] },
+                { id: 2, image: "Cicak.png", answer: "CICAK", options: ["KATAK", "CICAK", "ULAT"] },
+                { id: 3, image: "Kelapa.png", answer: "KELAPA", options: ["CEMARA", "KELAPA", "PISANG"] },
+            ],
+            level3: [
+                { id: 1, image: "Bawang.png", answer: "BAWANG", options: ["BAWANG", "BELALANG", "KEJANG"] },
+                { id: 2, image: "Anggur.png", answer: "ANGGUR", options: ["ANGSA", "ANGGUR", "AGUNG"] },
+                { id: 3, image: "Bintang.png", answer: "BINTANG", options: ["BATANG", "BENTANG", "BINTANG"] },
+            ],
+        };
+        const SUSUN_KATA_DATA = {
+            level1: [ 
+                { id: 1, scrambled: ["U", "I", "B"], validWords: ["IBU", "UBI"] },
+                { id: 2, scrambled: ["K", "U", "A"], validWords: ["AKU", "KAU"] },
+                { id: 3, scrambled: ["A", "K", "I", "D"], validWords: ["DIA", "ADIK"] },   
+                { id: 4, scrambled: ["M", "A", "K", "U"], validWords: ["KAMU", "MUKA"] }, 
+                { id: 5, scrambled: ["P", "A", "S", "I"], validWords: ["SAPI", "API"] }, 
+            ],
+            level2: [ 
+                { id: 1, scrambled: ["A", "S", "R", "B", "E"], validWords: ["BESAR", "BERAS"] }, 
+                { id: 2, scrambled: ["T", "R", "A", "U", "B", "M"], validWords: ["RAMBUT", "BARU", "RABU"] },
+                { id: 3, scrambled: ["P", "A", "U", "L", "M"], validWords: ["LAMPU", "MALU", "LUPA", "PALU", "MALU"] },
+            ],
+            level3: [ 
+                { id: 1, scrambled: ["G", "A", "S", "A", "N"], validWords: ["ANGSA", "SANGA"] },
+                { id: 2, scrambled: ["C", "U", "I", "K", "G", "N"], validWords: ["KUCING", "KUNCI", "GUCI"] },
+                { id: 3, scrambled: ["M", "A", "H", "A", "R", "I", "T", "A"], validWords: ["MATAHARI", "MARAH", "MAHAR", "HARTA", "HARI", "MATA", "RATA"] }
+            ],
+        };
+        const SUSUN_KALIMAT_DATA = {
+            level1: [
+                { id: 1, type: "Pernyataan", correctSentence: "Saya suka makan apel.", words: ["apel.", "Saya", "suka", "makan"] },
+                { id: 2, type: "Pernyataan", correctSentence: "Adik sedang bermain di taman.", words: ["bermain", "taman.", "Adik", "sedang", "di"] },
+                { id: 3, type: "Pernyataan", correctSentence: "Ayah membaca koran di teras rumah.", words: ["membaca", "teras", "di", "Ayah", "rumah.", "koran"] },
+            ],
+            level2: [ 
+                { id: 1, type: "Pertanyaan", correctSentence: "Apakah kamu sudah makan?", words: ["sudah", "kamu", "makan?", "Apakah"] },
+                { id: 2, type: "Pertanyaan", correctSentence: "Di mana letak pensilmu sekarang?", words: ["Di", "sekarang?", "letak", "mana", "pensilmu"] },
+                { id: 3, type: "Pertanyaan", correctSentence: "Kapan kita akan mulai belajar membaca?", words: ["Kapan", "belajar", "akan", "membaca?", "mulai", "kita"] },
+            ],
+            level3: [ 
+                { id: 1, type: "Perintah", correctSentence: "Tolong ambilkan buku itu sekarang!", words: ["buku", "sekarang!", "Tolong", "itu", "ambilkan"] },
+                { id: 2, type: "Larangan", correctSentence: "Jangan buang sampah sembarangan di sini.", words: ["buang", "di", "sampah", "sembarangan", "Jangan", "sini."] },
+                { id: 3, type: "Perintah", correctSentence: "Tutup pintu kamar setelah kamu keluar.", words: ["kamar", "setelah", "keluar.", "Tutup", "kamu", "pintu"] },
+            ],
+        };
+
+        // =========================================================================
+        // --- VARIABEL & DOM ELEMENTS ---
+        // =========================================================================
+        let currentGame = null; 
+        let currentLevel = null; 
+        let currentQuestionIndex = -1; 
+        let currentAnswer = []; 
+        let currentSentence = []; 
+        let foundWords = []; 
+        let gameStatus = {}; 
+
+        const $ = id => document.getElementById(id);
+        const mainMenu = $('main-menu');
+        const levelSelection = $('level-selection');
+        const gameArea = $('game-area');
+        const questionGrid = $('question-grid');
+        const activeQuestionView = $('active-question-view');
+        const modal = $('custom-modal');
+        const modalOkBtn = $('modal-ok-btn');
+        const audioCorrect = $('audio-correct');
+        const audioWrong = $('audio-wrong');
+        const modalContent = document.querySelector('.modal-content');
+
+        // =========================================================================
+        // --- INISIALISASI & NAVIGASI ---
+        // =========================================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            gameStatus = {
+                'eja-baca': { '1': new Array(5).fill(false), '2': new Array(5).fill(false), '3': new Array(5).fill(false) },
+                'tebak-gambar': { '1': new Array(3).fill(false), '2': new Array(3).fill(false), '3': new Array(3).fill(false) },
+                'susun-kata': { '1': new Array(5).fill(false), '2': new Array(3).fill(false), '3': new Array(3).fill(false) },
+                'susun-kalimat': { '1': new Array(3).fill(false), '2': new Array(3).fill(false), '3': new Array(3).fill(false) },
+            };
+
+            document.querySelectorAll('.game-card').forEach(card => {
+                card.addEventListener('click', (e) => {
+                    currentGame = e.currentTarget.getAttribute('data-game');
+                    showScreen('level-selection');
+                });
+            });
+
+            document.querySelectorAll('.level-card').forEach(card => {
+                card.addEventListener('click', (e) => {
+                    currentLevel = e.currentTarget.getAttribute('data-level');
+                    showScreen('question-grid');
+                });
+            });
+
+            $('back-to-menu').addEventListener('click', () => showScreen('main-menu'));
+            $('back-to-level').addEventListener('click', () => showScreen('level-selection'));
+
+            showScreen('main-menu');
+        });
+
+        function showScreen(screen) {
+            mainMenu.classList.add('hidden');
+            levelSelection.classList.add('hidden');
+            gameArea.classList.add('hidden');
+            activeQuestionView.classList.add('hidden');
+            $('back-to-level').style.display = 'none';
+
+            if (screen === 'main-menu') {
+                mainMenu.classList.remove('hidden');
+            } else if (screen === 'level-selection') {
+                levelSelection.classList.remove('hidden');
+                const name = currentGame.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                $('level-title').textContent = `Pilih Kesulitan untuk: ${name.replace('Eja-baca', 'EJA & BACA')}`;
+            } else if (screen === 'question-grid') {
+                gameArea.classList.remove('hidden');
+                $('back-to-level').style.display = 'block';
+                questionGrid.classList.remove('hidden'); 
+                const name = currentGame.toUpperCase().replace('-', ' ');
+                $('current-game-info').textContent = `Permainan: ${name.replace('EJA BACA', 'EJA & BACA')} | Level: ${currentLevel}`;
+                generateQuestionGrid();
+            } else if (screen === 'active-question') {
+                gameArea.classList.remove('hidden');
+                questionGrid.classList.add('hidden');
+                activeQuestionView.classList.remove('hidden');
+            }
+        }
+
+        // =========================================================================
+        // --- FUNGSI GRID SOAL ---
+        // =========================================================================
+        function generateQuestionGrid() {
+            questionGrid.innerHTML = '';
+            
+            const isVisualGame = currentGame === 'tebak-gambar' || currentGame === 'eja-baca';
+            const dataMap = { 'eja-baca': EJA_BACA_DATA, 'tebak-gambar': TEBAK_GAMBAR_DATA, 'susun-kata': SUSUN_KATA_DATA, 'susun-kalimat': SUSUN_KALIMAT_DATA };
+            const currentData = dataMap[currentGame][`level${currentLevel}`];
+            const maxQuestions = currentData.length; 
+
+            const status = gameStatus[currentGame][currentLevel];
+
+            for (let i = 0; i < maxQuestions; i++) {
+                const box = document.createElement('div');
+                box.classList.add('question-box');
+                
+                if (status[i]) {
+                    box.classList.add('completed');
+                }
+                
+                if (isVisualGame) {
+                    box.classList.add('thumbnail');
+                    const question = currentData[i];
+                    
+                    const img = document.createElement('img');
+                    img.src = `images/${question.image}`; 
+                    img.alt = `Soal ${i + 1}`;
+                    box.appendChild(img);
+
+                    const numberSpan = document.createElement('span');
+                    numberSpan.textContent = i + 1;
+                    numberSpan.style.cssText = 'position:absolute; top:5px; right:5px; background:rgba(255,255,255,0.7); padding:2px 5px; border-radius:5px; color:#333; font-size:0.5em;';
+                    box.appendChild(numberSpan);
+
+                } else {
+                    box.textContent = i + 1;
+                }
+
+                box.setAttribute('data-index', i);
+
+                if (!status[i]) {
+                    box.addEventListener('click', () => {
+                        currentQuestionIndex = i;
+                        renderQuestion(i);
+                        showScreen('active-question');
+                    });
+                }
+                questionGrid.appendChild(box);
+            }
+        }
+
+        function renderQuestion(index) {
+            const dataMap = { 'eja-baca': EJA_BACA_DATA, 'tebak-gambar': TEBAK_GAMBAR_DATA, 'susun-kata': SUSUN_KATA_DATA, 'susun-kalimat': SUSUN_KALIMAT_DATA };
+            const data = dataMap[currentGame][`level${currentLevel}`][index];
+            
+            if (currentGame === 'eja-baca') renderEjaBaca(data);
+            else if (currentGame === 'tebak-gambar') renderTebakGambar(data);
+            else if (currentGame === 'susun-kata') renderSusunKata(data);
+            else if (currentGame === 'susun-kalimat') renderSusunKalimat(data);
+        }
+        
+        // =========================================================================
+        // --- FUNGSI MODAL & SUARA ---
+        // =========================================================================
+        function playSound(isCorrect) {
+            const audio = isCorrect ? audioCorrect : audioWrong;
+            audio.currentTime = 0; 
+            
+            audio.play()
+                .then(() => {})
+                .catch(error => {
+                    console.warn("Autoplay audio diblokir.", error);
+                });
+        }
+
+        function showCustomModal(isCorrect, message) {
+            playSound(isCorrect);
+            $('modal-title').textContent = isCorrect ? "🎉 HEBAT!" : "😔 BELUM TEPAT!";
+            $('modal-message').textContent = message;
+            
+            modalContent.classList.remove('correct-bg', 'wrong-bg');
+            modalContent.classList.add(isCorrect ? 'correct-bg' : 'wrong-bg');
+            modal.classList.remove('hidden');
+            
+            modalOkBtn.onclick = () => {
+                modal.classList.add('hidden');
+                if (isCorrect) {
+                    showScreen('question-grid');
+                } else {
+                    // Reset game state saat jawaban salah (hanya untuk Susun Kata/Kalimat)
+                    if (currentGame === 'susun-kata') {
+                         renderSusunKata(SUSUN_KATA_DATA[`level${currentLevel}`][currentQuestionIndex]);
+                    } else if (currentGame === 'susun-kalimat') {
+                        renderSusunKalimat(SUSUN_KALIMAT_DATA[`level${currentLevel}`][currentQuestionIndex]);
+                    } else if (currentGame === 'eja-baca') {
+                        renderEjaBaca(EJA_BACA_DATA[`level${currentLevel}`][currentQuestionIndex]);
+                    }
+                    // Tebak Gambar diurus langsung di checkTebakGambar
+                }
+            };
+        }
+        
+        // =========================================================================
+        // --- LOGIKA GAME 4: EJA & BACA (BARU) ---
+        // =========================================================================
+        function renderEjaBaca(data) {
+            currentAnswer = [];
+            const answerLength = data.answer.length;
+
+            const boxes = data.answer.split('').map((_, i) => 
+                `<div class="answer-box" data-index="${i}" style="width: 40px; height: 40px; line-height: 40px; border: 3px solid var(--pastel-dark); margin: 0 2px;"></div>`
+            ).join('');
+
+            const letters = data.scrambled.map((letter, i) => 
+                `<button class="letter-btn" onclick="handleEjaBacaClick(this, '${letter}', ${i})">${letter}</button>`
+            ).join('');
+
+            activeQuestionView.innerHTML = `
+                <h3>Soal ${data.id} - Eja Nama Gambar!</h3>
+                <div class="image-placeholder"><img src="images/${data.image}" alt="${data.answer}" style="max-width: 100%; height: auto;"></div>
+                
+                <div id="answer-container" style="display: flex; justify-content: center; gap: 5px; margin-bottom: 20px;">
+                    ${boxes}
+                </div>
+
+                <div id="letters-container" style="display: flex; flex-wrap: wrap; justify-content: center; margin-bottom: 20px;">
+                    ${letters}
+                </div>
+                
+                <button id="check-eja-btn" class="back-btn" style="background-color: var(--pastel-warning);" onclick="checkEjaBaca('${data.answer}')">CEK JAWABAN</button>
+                <button id="clear-eja-btn" class="back-btn" style="background-color: var(--pastel-neutral);">ULANGI</button>
+                
+                <p id="feedback-message" style="margin-top: 15px; font-weight: bold;"></p>
+            `;
+
+            $('clear-eja-btn').addEventListener('click', () => renderEjaBaca(data));
+        }
+
+        function handleEjaBacaClick(button, letter, originalIndex) {
+            const answerBoxes = document.querySelectorAll('#answer-container .answer-box');
+            
+            // Cari kotak kosong pertama
+            let emptyIndex = -1;
+            for (let i = 0; i < answerBoxes.length; i++) {
+                if (answerBoxes[i].textContent === "") {
+                    emptyIndex = i;
+                    break;
+                }
+            }
+
+            if (emptyIndex !== -1) {
+                // Isi kotak
+                answerBoxes[emptyIndex].textContent = letter;
+                answerBoxes[emptyIndex].style.backgroundColor = 'var(--pastel-primary)';
+                
+                // Simpan referensi tombol yang dipakai
+                currentAnswer[emptyIndex] = { letter: letter, button: button };
+
+                // Nonaktifkan tombol huruf
+                button.disabled = true;
+                button.style.opacity = '0.5';
+            }
+        }
+        
+        function checkEjaBaca(correctAnswer) {
+            const userAnswer = currentAnswer.map(item => item ? item.letter : '').join('');
+            const feedback = $('feedback-message');
+            const checkBtn = $('check-eja-btn');
+
+            if (userAnswer.length !== correctAnswer.length) {
+                 feedback.textContent = "😔 Lengkapi semua kotak huruf!";
+                 feedback.style.color = 'var(--pastel-secondary)';
+                 return;
+            }
+
+            if (userAnswer === correctAnswer) {
+                feedback.textContent = `🎉 BENAR! ${correctAnswer}!`;
+                feedback.style.color = 'var(--pastel-success)';
+                gameStatus[currentGame][currentLevel][currentQuestionIndex] = true;
+                
+                // Nonaktifkan semua interaksi
+                checkBtn.disabled = true;
+                $('clear-eja-btn').disabled = true;
+                document.querySelectorAll('#letters-container .letter-btn').forEach(btn => btn.disabled = true);
+                
+                showCustomModal(true, `Kamu berhasil mengeja ${correctAnswer}!`);
+            } else {
+                feedback.textContent = "😔 SALAH! Coba lagi.";
+                feedback.style.color = 'var(--pastel-secondary)';
+                
+                // Logika Reset Cepat: Kosongkan kotak jawaban dan aktifkan kembali tombol yang dipakai
+                currentAnswer.forEach((item, index) => {
+                    if (item && item.button) {
+                        item.button.disabled = false;
+                        item.button.style.opacity = '1';
+                        document.querySelector(`#answer-container .answer-box[data-index="${index}"]`).textContent = "";
+                        document.querySelector(`#answer-container .answer-box[data-index="${index}"]`).style.backgroundColor = 'white';
+                    }
+                });
+                currentAnswer = [];
+                showCustomModal(false, `Jawaban salah. Coba susun hurufnya kembali!`);
+            }
+        }
+
+
+        // =========================================================================
+        // --- LOGIKA GAME 2: TEBAK GAMBAR ---
+        // =========================================================================
+        function renderTebakGambar(data) {
+            activeQuestionView.innerHTML = `
+                <h3>Soal ${data.id} - Pilih Kata yang Tepat!</h3>
+                <div class="image-placeholder"><img src="images/${data.image}" alt="${data.answer}" style="max-width: 100%; height: auto;"></div>
+                <div id="options-container">
+                    ${data.options.map((option) => `<button class="option-btn" onclick="checkTebakGambar(this, '${option}', '${data.answer}')">${option}</button>`).join('')}
+                </div>
+                <p id="feedback-message" style="margin-top: 15px; font-weight: bold;"></p>
+            `;
+        }
+
+        function checkTebakGambar(button, selected, correct) {
+            const container = $('options-container');
+            
+            container.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+
+            if (selected === correct) {
+                button.classList.add('correct');
+                gameStatus[currentGame][currentLevel][currentQuestionIndex] = true;
+                showCustomModal(true, `Kamu berhasil menjawab soal ${currentQuestionIndex + 1}!`);
+                
+            } else {
+                button.classList.add('wrong');
+                
+                showCustomModal(false, `Jawaban Kamu belum tepat. Coba tebak lagi!`);
+                
+                modalOkBtn.onclick = () => {
+                    modal.classList.add('hidden');
+                    
+                    container.querySelectorAll('.option-btn').forEach(b => {
+                        b.classList.remove('wrong', 'correct');
+                        b.disabled = false; 
+                    });
+                };
+            }
+        }
+        
+        // =========================================================================
+        // --- LOGIKA GAME 3: SUSUN KATA (Multiple Answer) ---
+        // =========================================================================
+        function renderSusunKata(data) {
+            foundWords = []; 
+            currentAnswer = []; 
+
+            const letters = data.scrambled.map((letter) => 
+                `<button class="letter-btn" onclick="handleLetterClick(this, '${letter}')">${letter}</button>`
+            ).join('');
+
+            const activeWordBox = `<div id="active-word-box" style="height: 40px; line-height: 40px; border: 3px dashed var(--pastel-secondary); background-color: #fff9e6; margin-bottom: 15px; border-radius: 12px; font-size: 2.2em; font-weight: bold;"></div>`;
+
+            activeQuestionView.innerHTML = `
+                <h3>Soal ${data.id} - Temukan Kata yang Tersembunyi!</h3>
+                
+                ${activeWordBox}
+                
+                <div id="letters-container" style="display: flex; flex-wrap: wrap; justify-content: center; margin-bottom: 20px;">${letters}</div>
+                
+                <div style="display: flex; justify-content: center; gap: 10px;">
+                    <button id="check-word-btn" class="back-btn" style="background-color: var(--pastel-warning);" onclick="checkSusunKata(SUSUN_KATA_DATA.level${currentLevel}[currentQuestionIndex])">CEK KATA</button>
+                    <button id="clear-word-btn" class="back-btn" style="background-color: var(--pastel-neutral);" onclick="resetActiveWord()">HAPUS</button>
+                    <button id="finish-level-btn" class="back-btn" style="background-color: var(--pastel-success); display: none;" onclick="showScreen('question-grid')">SELESAI</button>
+                </div>
+
+                <p id="feedback-message" style="margin-top: 15px; font-weight: bold;"></p>
+
+                <div style="margin-top: 30px;">
+                    <h4>Kata Ditemukan (<span id="found-count">0</span> / ${data.validWords.length}):</h4>
+                    <div id="found-words-container" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">
+                        ${generateAnswerBlanks(data.validWords)}
+                    </div>
+                </div>
+            `;
+        }
+
+        function generateAnswerBlanks(validWords) {
+            let html = '';
+            const groups = validWords.reduce((acc, word) => {
+                const length = word.length;
+                if (!acc[length]) acc[length] = [];
+                acc[length].push(word);
+                return acc;
+            }, {});
+
+            for (const length in groups) {
+                html += `<div style="width: 100%; margin-top: 10px; font-weight: bold; font-size: 1.2em;">${length} Huruf:</div>`;
+                groups[length].forEach(word => {
+                    html += `<div class="answer-box-group" id="blank-${word}" style="display: inline-flex; gap: 2px; margin: 5px;">`;
+                    for (let i = 0; i < length; i++) {
+                        html += `<div class="answer-blank"></div>`;
+                    }
+                    html += `</div>`;
+                });
+            }
+            return html;
+        }
+
+        function resetActiveWord() {
+            currentAnswer.forEach(item => {
+                if (item.button) {
+                    item.button.disabled = false;
+                    item.button.style.opacity = '1';
+                }
+            });
+
+            currentAnswer = [];
+            $('active-word-box').textContent = '';
+        }
+        
+        function handleLetterClick(button, letter) { 
+            if (!Array.isArray(currentAnswer)) {
+                currentAnswer = [];
+            }
+            
+            currentAnswer.push({ letter: letter, button: button }); 
+            
+            $('active-word-box').textContent = currentAnswer.map(item => item.letter).join('');
+            
+            button.disabled = true;
+            button.style.opacity = '0.5';
+        }
+
+        function fillAnswerBlank(word) {
+            const blankGroup = $(`blank-${word}`);
+            if (blankGroup) {
+                blankGroup.innerHTML = word.split('').map(letter => 
+                    `<div class="answer-blank" style="border: 1px solid #8dc67d; background-color: var(--pastel-success); color: white;">${letter}</div>`
+                ).join('');
+            }
+            $('found-count').textContent = foundWords.length;
+        }
+
+
+        function checkSusunKata(questionData) {
+            const userAnswer = currentAnswer.map(item => item.letter).join(''); 
+            const feedback = $('feedback-message');
+            
+            if (userAnswer.length < 3) {
+                feedback.textContent = "Kata minimal harus 3 huruf.";
+                feedback.style.color = 'var(--pastel-dark)';
+                return;
+            }
+
+            const isCorrect = questionData.validWords.includes(userAnswer);
+            const isNew = isCorrect && !foundWords.includes(userAnswer);
+
+            if (isNew) {
+                foundWords.push(userAnswer);
+                feedback.textContent = `🥳 BENAR! Kata "${userAnswer}" ditemukan!`;
+                feedback.style.color = 'var(--pastel-success)';
+                
+                fillAnswerBlank(userAnswer);
+                resetActiveWord();
+                
+                if (foundWords.length === questionData.validWords.length) {
+                    gameStatus[currentGame][currentLevel][currentQuestionIndex] = true;
+                    $('check-word-btn').disabled = true;
+                    $('clear-word-btn').disabled = true;
+                    $('finish-level-btn').style.display = 'block'; 
+                    
+                    showCustomModal(true, `LEVEL SELESAI! Kamu menemukan semua ${foundWords.length} kata!`);
+
+                } else {
+                    showCustomModal(true, `Kata ditemukan! Teruskan mencari! (${foundWords.length}/${questionData.validWords.length})`);
+                    
+                    modalOkBtn.onclick = () => {
+                        modal.classList.add('hidden');
+                    };
+                }
+            } else if (isCorrect && !isNew) {
+                feedback.textContent = `💡 Kata "${userAnswer}" sudah kamu temukan sebelumnya.`;
+                feedback.style.color = 'blue';
+                resetActiveWord();
+                showCustomModal(false, `Kata ini sudah ditemukan! Cari kata lain.`);
+                
+                modalOkBtn.onclick = () => {
+                    modal.classList.add('hidden');
+                };
+            } else {
+                feedback.textContent = `😔 SALAH! "${userAnswer}" bukan kata yang valid.`;
+                feedback.style.color = 'var(--pastel-secondary)';
+                resetActiveWord();
+                showCustomModal(false, `Kata tidak ditemukan. Coba susun huruf lain!`);
+                
+                modalOkBtn.onclick = () => {
+                    modal.classList.add('hidden');
+                };
+            }
+        }
+
+        // =========================================================================
+        // --- LOGIKA GAME 4: SUSUN KALIMAT ---
+        // =========================================================================
+        function renderSusunKalimat(data) {
+            currentSentence = [];
+            const sentenceBoxHTML = `<div id="sentence-box" style="min-height: 50px; border: 3px dashed var(--pastel-secondary); border-radius: 8px; padding: 10px; margin-bottom: 20px; background-color: #fff9e6;"><p style="color: var(--pastel-dark);">Klik kata-kata di bawah untuk menyusun kalimat...</p></div>`;
+            const words = data.words.map((word) => `<button class="word-btn" onclick="handleWordClick(this, '${word}')">${word}</button>`).join('');
+
+            activeQuestionView.innerHTML = `
+                <h3>Soal ${data.id} - Susun Kalimat ${data.type}!</h3>
+                ${sentenceBoxHTML}
+                <div id="words-container" style="display: flex; flex-wrap: wrap; justify-content: center; margin-bottom: 20px;">${words}</div>
+                <button id="check-sentence-btn" class="back-btn" style="background-color: var(--pastel-warning);" onclick="checkSusunKalimat('${data.correctSentence}')">CEK KALIMAT</button>
+                <button id="undo-word-btn" class="back-btn" style="background-color: var(--pastel-neutral);" onclick="undoLastWord()">HAPUS KATA TERAKHIR</button>
+                <p id="feedback-message" style="margin-top: 15px; font-weight: bold;"></p>
+            `;
+            updateSentenceBox();
+        }
+
+        function updateSentenceBox() {
+            const sentenceBox = $('sentence-box');
+            sentenceBox.innerHTML = currentSentence.length > 0 ? 
+                `<p style="font-size: 1.2em; font-weight: bold; color: var(--pastel-dark);">${currentSentence.join(' ')}</p>` :
+                `<p style="color: var(--pastel-dark);">Klik kata-kata di bawah untuk menyusun kalimat...</p>`;
+        }
+        
+        function handleWordClick(button, word) {
+            currentSentence.push(word);
+            button.disabled = true;
+            button.style.opacity = '0.5';
+            updateSentenceBox();
+        }
+
+        function undoLastWord() {
+            if (currentSentence.length === 0) return;
+            const lastWord = currentSentence.pop();
+            const wordBtn = document.querySelector(`#words-container .word-btn[onclick*="'${lastWord}'"]:disabled`);
+            if (wordBtn) {
+                wordBtn.disabled = false;
+                wordBtn.style.opacity = '1';
+            }
+            updateSentenceBox();
+        }
+
+        function checkSusunKalimat(correctSentence) {
+            const userAnswer = currentSentence.join(' ');
+            const feedback = $('feedback-message');
+            
+            if (userAnswer === correctSentence) {
+                feedback.textContent = `🎉 FANTASTIS! Kalimat Kamu Benar.`;
+                feedback.style.color = 'var(--pastel-success)';
+                gameStatus[currentGame][currentLevel][currentQuestionIndex] = true;
+                document.querySelectorAll('#words-container .word-btn, #check-sentence-btn, #undo-word-btn').forEach(btn => btn.disabled = true);
+                showCustomModal(true, `Kamu berhasil menyusun kalimat soal ${currentQuestionIndex + 1}!`);
+            } else {
+                feedback.textContent = "😔 BELUM TEPAT! Coba cek kembali urutan kata-katanya.";
+                feedback.style.color = 'var(--pastel-secondary)';
+                showCustomModal(false, `Urutan kalimat Kamu belum tepat. Coba susun ulang!`);
+            }
+        }
+    </script>
+</body>
+</html>
